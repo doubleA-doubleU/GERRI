@@ -1,7 +1,13 @@
 GERRI (Guidance Enabled Robotic Raceline Interpreter)
 
+Tamiya TL01 RC car
 Android phone (Samsung Galaxy S5)
+USB OTG cable (micro to mini)
+3D printed phone mounts
 Microchip PIC32MX250F128B microcontroller
+LSM6DS33 Accelerometer https://www.pololu.com/product/2736 
+DRV8835 H-bridge https://www.pololu.com/product/2135
+2x HTC Vive Position Sensor (TS3633-CM1) https://www.triadsemi.com/product/ts3633-cm1/
 Custom PCB with mounting holes for:
 	28 Pin DIP socket
 	Mini USB connector
@@ -16,8 +22,3 @@ Custom PCB with mounting holes for:
 	2x 10 uF polarized capacitors
 	5-pin breakout for PICkit3 programmer
 	2x 8-pin breakouts for remaining I/O pins and power/ground connections
-Tamiya TL01 RC car
-DRV8835 H-bridge https://www.pololu.com/product/2135
-2x HTC Vive Position Sensor (TS3633-CM1) https://www.triadsemi.com/product/ts3633-cm1/
-USB OTG cable (micro to mini)
-3D printed phone mounts
