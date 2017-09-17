@@ -1,0 +1,23 @@
+' ******************************************************************************
+' swxJRNL.swj - journal recorded on 05/20/07 by Super Utilisateur
+' *****************************************************************************
+Dim swApp As Object
+Dim Part As Object
+Dim boolstatus As Boolean
+Dim longstatus As Long
+Dim Annotation As Object
+Dim Gtol As Object
+Dim DatumTag As Object
+Dim FeatureData As Object
+Dim Feature As Object
+Dim Component As Object
+Sub main()
+
+Set swApp = Application.SldWorks
+
+Set Part = swApp.OpenDoc4 ("C:\Documents and Settings\Super Utilisateur\Mes documents\aranger\Modèle Réduit\Coussinet.SLDPRT", 1, 0, "", longstatus)
+Set Part = swApp.ActivateDoc ("Coussinet.SLDPRT")
+Set Part = Nothing
+swApp.CloseDoc "Coussinet.SLDPRT"
+swApp.ExitApp
+End Sub
