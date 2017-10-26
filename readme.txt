@@ -22,3 +22,14 @@ Custom PCB with mounting holes for:
 	2x 10 uF polarized capacitors
 	5-pin breakout for PICkit3 programmer
 	2x 8-pin breakouts for remaining I/O pins and power/ground connections
+	
+Harmony files modified (from new blank project, after generating code for first time):
+	copy all code from provided default.mhc, app.c, app.h, main.c, system_config.h, system_interrupt.c into Harmony files of same name
+Android files modified (from new Empty Activity project):
+	copy classes.jar to .../<your_app_name>/app/libs/ directory
+	in IDE navigate left panel to Project/<your_app_name>/app/libs/
+	right click classes.jar, Add as Library, Add to Module: app
+	in IDE navigate left panel to Android/app/res/, right click res, add driectory, name it xml
+	right click xml, add new XML Resource file, name it device_filter, open file, replace with code from provided file
+	copy all code from provided activity_main.xml, AndroidManifest.xml, MainActivity.java into Android Studio files of same name
+	
