@@ -1,12 +1,16 @@
 GERRI (Guidance Enabled Robotic Raceline Interpreter)
 
-Tamiya TL01 RC car
-Android phone (Samsung Galaxy S5)
-USB OTG cable (micro to mini)
-3D printed phone mounts
+Android phone - Samsung Galaxy S5 (CAD model: https://grabcad.com/library/samsung-galaxy-s5-3)
+Tamiya TL01 RC car (CAD model: https://grabcad.com/library/tamiya-car/files)
+RS 540SH Motor
+S3003 Servo
+7.2V NiMH battery pack
+USB OTG cable - micro to mini
+3D printed phone and PCB mounts
 Microchip PIC32MX250F128B microcontroller
 LSM6DS33 Accelerometer https://www.pololu.com/product/2736 
-DRV8835 H-bridge https://www.pololu.com/product/2135
+VNH5019 Motor Driver Carrier (https://www.pololu.com/product/1451)
+HTC Vive Base Station (https://www.vive.com/us/accessory/base-station/)
 2x HTC Vive Position Sensor (TS3633-CM1) https://www.triadsemi.com/product/ts3633-cm1/
 Custom PCB with mounting holes for:
 	28 Pin DIP socket
@@ -24,12 +28,16 @@ Custom PCB with mounting holes for:
 	2x 8-pin breakouts for remaining I/O pins and power/ground connections
 	
 Harmony files modified (from new blank project, after generating code for first time):
-	copy all code from provided default.mhc, app.c, app.h, main.c, system_config.h, system_interrupt.c into Harmony files of same name
+	copy all code from provided app.c, app.h, main.c, default.mhc, system_config.h, 
+	system_interrupt.c into Harmony files of same name
 Android files modified (from new Empty Activity project):
 	copy classes.jar to .../<your_app_name>/app/libs/ directory
 	in IDE navigate left panel to Project/<your_app_name>/app/libs/
 	right click classes.jar, Add as Library, Add to Module: app
-	in IDE navigate left panel to Android/app/res/, right click res, add driectory, name it xml
-	right click xml, add new XML Resource file, name it device_filter, open file, replace with code from provided file
-	copy all code from provided activity_main.xml, AndroidManifest.xml, MainActivity.java into Android Studio files of same name
+	in IDE navigate left panel to Android/app/res/, right click 
+	res, add driectory, name it xml
+	right click xml, add new XML Resource file, name it device_filter, open file, 
+	replace with code from provided file
+	copy all code from provided activity_main.xml, AndroidManifest.xml, MainActivity.java 
+	into Android Studio files of same name
 	
