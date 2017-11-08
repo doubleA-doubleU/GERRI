@@ -180,7 +180,7 @@ int len, i = 0, j = 0, startTime = 0, go = 0;
 char rx[64]; // the raw data
 int rxPos = 0; // how much data has been stored
 int gotRx = 0; // the flag
-int rxVal = 0; // a place to store the int that was received
+int rxVal = 0, rxValPrev = 0; // a place to store the int that was received
 int duty = 0; // PWM duty cycles for motor
 float x_ang[2] = {0.0,0.0},y_ang[2] = {0.0,0.0}; // sensor angles 
 float x_pos[2] = {0.0,0.0}, y_pos[2] = {0.0,0.0}; // sensor positions

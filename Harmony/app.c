@@ -362,8 +362,8 @@ void APP_Initialize(void) {
     RPB14Rbits.RPB14R = 0b0101; // B14 is OC3 (servo)
     OC3CONbits.OCM = 0b110;     // PWM mode without fault pin; other OC3CON bits are defaults
 	OC3CONbits.OCTSEL = 0;      // OC3 uses Timer2
-	OC3RS = 1170;               // duty cycle = OC3RS/(PR2+1)
-	OC3R = 1170;                // initialize before turning OC3 on; afterward it is read-only
+	OC3RS = 1000;               // duty cycle = OC3RS/(PR2+1)
+	OC3R = 1000;                // initialize before turning OC3 on; afterward it is read-only
     OC3CONbits.ON = 1;			// turn on OC3
     
     INTCONbits.MVEC = 1;        // enable multiple interrupts vectors
@@ -513,43 +513,32 @@ void APP_Tasks(void) {
             appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
 
             if (gotRx) { // rxVal should be an int between 0 and 640 (setting motor speed and steering angle from Center of Mass)
-                if (rxVal <= 0) { // need to back up to find the line again
-                    duty = 20;
-                    LATAbits.LATA1 = 1; // reverse direction
-                    LATBbits.LATB2 = 0; // reverse direction
-                    OC3RS = 1170;       // in a straight line
-                    go = 1;
-                } else if ( rxVal > 640) { // stop button pressed, end movement
+                if (rxVal > 640) {          // stop button pressed, no movement, center the steering, reset lap time
+                    duty = 0;
                     LATAbits.LATA1 = 0;
                     LATBbits.LATB2 = 1;
-                    duty = 0;
-                    OC3RS = 1170;
+                    OC3RS = 1000;
                     go = 0;
                     lapTime = 0.0;
-                } else if (rxVal < 107) { // need to steer to the center, OC3RS between 850 and 1490
-                    LATAbits.LATA1 = 0;
-                    LATBbits.LATB2 = 1;
+                } else if (rxVal <= 0) {    // reverse direction and previous steering command to find the line again
                     duty = 20;
-                    OC3RS = 1490;
+                    LATAbits.LATA1 = 1;     // reverse drive motion
+                    LATBbits.LATB2 = 0;     // reverse drive motion
+                    rxVal = rxValPrev;
+                    OC3RS = 680 + rxValPrev;
                     go = 1;
-                } else if (rxVal > 533) {
-                    LATAbits.LATA1 = 0;
-                    LATBbits.LATB2 = 1;
+                } else {                    // steer towards the COM
                     duty = 20;
-                    OC3RS = 850;  
-                    go = 1;
-                } else {
-                    LATAbits.LATA1 = 0;
-                    LATBbits.LATB2 = 1;
-                    duty = 20;
-                    OC3RS = 1810 - 1.5*rxVal;
+                    LATAbits.LATA1 = 0;     // forward drive motion
+                    LATBbits.LATB2 = 1;     // forward drive motion
+                    OC3RS = 1320 - rxVal;   // ranges from 680 to 1320
                     go = 1;
                 }
-                OC1RS = duty*40; // convert duty cycle based on period register
+                OC1RS = duty*40;            // convert duty cycle based on period register
 
                 rxPos = 0;
                 gotRx = 0; // clear the flag
-                rxVal = 0; // clear the int
+                rxValPrev = rxVal;
 
                 for (j = 0; j < 64; j++) {
                     rx[j] = 0; // clear the array
@@ -558,9 +547,9 @@ void APP_Tasks(void) {
 
             if (go == 1) {
                 // calculate position
-                x_pos[0] = (LIGHTHOUSEHEIGHT*sin((120-LIGHTHOUSEANGLE)*DEG_TO_RAD)*sin((x_ang[0])*DEG_TO_RAD))/sin((60+LIGHTHOUSEANGLE-x_ang[0])*DEG_TO_RAD);
+                x_pos[0] = (LIGHTHOUSEHEIGHT*sin((x_ang[0])*DEG_TO_RAD))/(sin((60+LIGHTHOUSEANGLE-x_ang[0])*DEG_TO_RAD)*sin((120-LIGHTHOUSEANGLE)*DEG_TO_RAD));
                 y_pos[0] = (2*LIGHTHOUSEHEIGHT*sin(y_ang[0]*DEG_TO_RAD))/sin((150-y_ang[0])*DEG_TO_RAD);
-                x_pos[1] = (LIGHTHOUSEHEIGHT*sin((120-LIGHTHOUSEANGLE)*DEG_TO_RAD)*sin((x_ang[1])*DEG_TO_RAD))/sin((60+LIGHTHOUSEANGLE-x_ang[1])*DEG_TO_RAD);
+                x_pos[1] = (LIGHTHOUSEHEIGHT*sin((x_ang[1])*DEG_TO_RAD))/(sin((60+LIGHTHOUSEANGLE-x_ang[1])*DEG_TO_RAD)*sin((120-LIGHTHOUSEANGLE)*DEG_TO_RAD));
                 y_pos[1] = (2*LIGHTHOUSEHEIGHT*sin(y_ang[1]*DEG_TO_RAD))/sin((150-y_ang[1])*DEG_TO_RAD);
                 x = (x_pos[0] + x_pos[1])/2.0;
                 y = (y_pos[0] + y_pos[1])/2.0;
@@ -583,6 +572,8 @@ void APP_Tasks(void) {
                 } else {
                     theta = atan2(y_pos[1]-y_pos[0],x_pos[1]-x_pos[0]) + PHI + M_PI_2; // always treating left sensor as origin for angle calc
                 }
+                
+                // implement a moving average filter for x,y,theta!!!
                 
                 // calculate lap time
                 lapTime = lapTime + ((float) (_CP0_GET_COUNT() - startTime)) / 24000000.0;
