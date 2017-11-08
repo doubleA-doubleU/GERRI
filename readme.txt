@@ -3,7 +3,7 @@ GERRI (Guidance Enabled Robotic Raceline Interpreter)
 Android phone - Samsung Galaxy S5 (CAD model: https://grabcad.com/library/samsung-galaxy-s5-3)
 Tamiya TL01 RC car (CAD model: https://grabcad.com/library/tamiya-car/files)
 RS 540SH Motor
-S3003 Servo
+MG996R Servo
 7.2V NiMH battery pack
 USB OTG cable - micro to mini
 3D printed phone and PCB mounts
