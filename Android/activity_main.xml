@@ -29,7 +29,7 @@
             android:id="@+id/textView01"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Blue Greater Than: 100" />
+            android:text="Blue Greater Than: 120" />
 
         <SeekBar
             android:id="@+id/seek1"
@@ -39,24 +39,7 @@
             android:max="255"
             android:paddingBottom="0dp"
             android:paddingTop="0dp"
-            android:progress="100"
-            android:secondaryProgress="0" />
-
-        <TextView
-            android:id="@+id/textView02"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Start Y: 240" />
-
-        <SeekBar
-            android:id="@+id/seek2"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="0dp"
-            android:max="480"
-            android:paddingBottom="0dp"
-            android:paddingTop="0dp"
-            android:progress="240"
+            android:progress="120"
             android:secondaryProgress="0" />
 
         <Button
@@ -75,8 +58,13 @@
             android:layout_width="640px"
             android:layout_height="480px" />
 
+        <SurfaceView
+            android:id="@+id/surfaceview2"
+            android:layout_width="500px"
+            android:layout_height="500px" />
+
         <TextView
-            android:id="@+id/textView03"
+            android:id="@+id/textView02"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
