@@ -42,6 +42,23 @@
             android:progress="120"
             android:secondaryProgress="0" />
 
+        <TextView
+            android:id="@+id/textView03"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Proportional Gain: 10" />
+
+        <SeekBar
+            android:id="@+id/seek2"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="0dp"
+            android:max="20"
+            android:paddingBottom="0dp"
+            android:paddingTop="0dp"
+            android:progress="10"
+            android:secondaryProgress="0" />
+
         <Button
             android:id="@+id/button1"
             android:layout_width="wrap_content"
@@ -61,7 +78,7 @@
         <SurfaceView
             android:id="@+id/surfaceview2"
             android:layout_width="500px"
-            android:layout_height="500px" />
+            android:layout_height="400px" />
 
         <TextView
             android:id="@+id/textView02"

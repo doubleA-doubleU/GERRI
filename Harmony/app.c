@@ -573,8 +573,6 @@ void APP_Tasks(void) {
                     theta = atan2(y_pos[1]-y_pos[0],x_pos[1]-x_pos[0]) + PHI + M_PI_2; // always treating left sensor as origin for angle calc
                 }
                 
-                // implement a moving average filter for x,y,theta!!!
-                
                 // calculate lap time
                 lapTime = lapTime + ((float) (_CP0_GET_COUNT() - startTime)) / 24000000.0;
                 

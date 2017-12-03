@@ -1,7 +1,6 @@
 package com.example.aaron.gerri;
 
 // libraries
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.PendingIntent;
@@ -16,7 +15,6 @@ import android.hardware.Camera;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -43,8 +41,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static android.graphics.Color.blue;
-import static android.graphics.Color.green;
-import static android.graphics.Color.red;
 import static android.graphics.Color.rgb;
 
 public class MainActivity extends Activity implements TextureView.SurfaceTextureListener {
@@ -56,17 +52,19 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     private SurfaceHolder mSurfaceHolder2;
     private Bitmap bmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
     private Canvas canvas = new Canvas(bmp);
-    private Bitmap bmp2 = Bitmap.createBitmap(500, 500, Bitmap.Config.ARGB_8888);
+    private Bitmap bmp2 = Bitmap.createBitmap(500, 400, Bitmap.Config.ARGB_8888);
     private Paint paint1 = new Paint();
     private TextView myTextView;
     private TextView myTextView2;
+    private TextView myTextView3;
     private SeekBar threshold;
+    private SeekBar threshold2;
     private Button button;
     int thresh = 120;
-    //int thresh2 = 190;
-    int go = 0;
-    int xTrack = 0, yTrack = 0;
-    float xCar = 0, yCar = 0, theta = 0, lapTime = 0;
+    int thresh2 = 10;
+    int go = -1, i = 0;
+    int xTrack = 0, yTrack = 0, xInit = 0, yInit = 0, xDesired_prev = 0, yDesired_prev = 0, xDesired, yDesired;
+    float xCar = 0, yCar = 0, theta = 0, lapTime = 0, thetaDesired_prev = 0, thetaDesired, angError, posError;
 
     private UsbManager manager;
     private UsbSerialPort sPort;
@@ -79,22 +77,23 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // keeps the screen from turning off
 
         threshold = (SeekBar) findViewById(R.id.seek1);
+        threshold2 = (SeekBar) findViewById(R.id.seek2);
         myTextView = (TextView) findViewById(R.id.textView01);
         myTextView2 = (TextView) findViewById(R.id.textView02);
+        myTextView3 = (TextView) findViewById(R.id.textView03);
         button = (Button) findViewById(R.id.button1);
 
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) { // change state variable
-                go = go + 1;
+                go = go + 2;
                 if (go > 2) {
-                    go = 0;
+                    go = -1;
                     // send 641 to the PIC to stop motors (outside of expected range for COM)
-                    int temp = 641;
-                    String sendString = String.valueOf(temp) + '\n';
-                    for (int j = 0; j < 3; j++) { // send multiple times to make sure the robot "hears" it
+                    String sendString = String.valueOf(641) + '\n';
+                    for (int j = 0; j < 5; j++) { // send multiple times to make sure the robot "hears" it
                         try {
-                            sPort.write(sendString.getBytes(), 10); // 10 is the timeout
+                            sPort.write(sendString.getBytes(), 1); // 1 is the timeout
                         } catch (IOException e) {
                         }
                     }
@@ -158,6 +157,23 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 thresh = progress;
                 myTextView.setText("Blue Greater Than: "+thresh);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+
+        threshold2.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                thresh2 = progress;
+                myTextView3.setText("Proportional Gain: "+thresh2);
             }
 
             @Override
@@ -269,12 +285,11 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
     private void updateReceivedData(byte[] data) {
 
-        // store/display received data as xCar,yCar,theta,lapTime variables
-        if (go ==1) {
+        // store received data in the xCar,yCar,theta,lapTime variables
+        if (go > 0) {
             String rxString = null;
             try {
                 rxString = new String(data, "UTF-8"); // put the data you got into a string
-                //sscanf(rxString,"%f %f %f %f",&xCar,&yCar,&theta,&lapTime); // need java equivalent of this
                 Scanner scan = new Scanner(rxString);
                 float buffer[] = new float[4];
                 int i = 0;
@@ -282,11 +297,10 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                     buffer[i] = scan.nextFloat();
                     i++;
                 }
-                xCar = buffer[0];
-                yCar = buffer[1];
-                theta = buffer[2];
-                lapTime = buffer[3];
-                myTextView2.setText(rxString);
+                xCar = buffer[0]*100; // convert to cm
+                yCar = buffer[1]*100 - 200; // convert to cm and shift to fit within bmp range
+                theta = buffer[2]; // in radians
+                lapTime = buffer[3]; // in seconds
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
@@ -340,8 +354,12 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                     float l = (float) (0.025*COMavg); // distance from left of frame to the COM (in cm)
                     float d = (float) (Math.sqrt(Math.pow(18.2,2) - Math.pow(l,2))); // distance from the car to the COM (in cm)
                     float theta2 = (float) (Math.atan2(8-l,16.35)); // angle from the car to the COM along a line 16.35 cm from car's position (in radians)
-                    xTrack = (int) (xCar*100 + d*Math.cos(theta + theta2));
-                    yTrack = 500 - (int) (yCar*100 + d*Math.sin(theta + theta2));
+                    xTrack = (int) (xCar + d*Math.cos(theta + theta2) + 0.5);
+                    yTrack = (int) (yCar + d*Math.sin(theta + theta2) +0.5);
+                    if (lapTime<0.1) {
+                        xInit = xTrack;
+                        yInit = yTrack;
+                    }
                     // add that point to the track bitmap
                     if (c2 != null) {
                         try {
@@ -356,7 +374,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                 //send COM to PIC
                 String sendString = String.valueOf(COMavg) + '\n';
                 try {
-                    sPort.write(sendString.getBytes(), 10); // 10 is the timeout
+                    sPort.write(sendString.getBytes(), 1); // 1 is the timeout
                 } catch (IOException e) {}
             }
             c.drawBitmap(bmp, 0, 0, null);
@@ -364,11 +382,85 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             c2.drawBitmap(bmp2, 0, 0, null);
             mSurfaceHolder2.unlockCanvasAndPost(c2);
 
-            // add condition for first lap complete (based on position and lapTime), then calculate racing line and change to go ==  2
-
+            // lap complete condition
+            double dist_from_start = Math.sqrt(Math.pow(xCar - xInit,2) + Math.pow(yCar - yInit,2));
+            if (lapTime>10 && dist_from_start <= 5) {
+                go = 2;
+            }
+            myTextView2.setText(String.format("(%d, %d) (%d, %d) d= %f", xInit, yInit, (int) xCar, (int) yCar, dist_from_start));
         }
+        // once the first lap is complete, follow line based on feedback control using bmp2 as desired path
+        if (go == 2) {
+            // find nearest white pixel in bmp2 by looking at the rings of pixels around current location
+            int x = (int) xCar;
+            int y = (int) yCar;
+            outerLoop:
+            for (int ring=0; ring<30;ring++) { // looking within 30cm radius
+                int[] pixels = new int[2*ring+1];
+                for (int row = -ring; row <= ring; row++) {
+                    try {
+                        bmp2.getPixels(pixels,0,bmp2.getWidth(),x-ring,y+row,2*ring+1,1);
+                    } catch (IllegalArgumentException iae) {} // sometimes the data is bad...
+                    for (int col = -ring; col <= ring; col++) {
+                        if (pixels[col+ring] == 0xffffffff) {
+                            // if the pixel is white, define (xDesired,yDesired) as the current row and column of the search
+                            xDesired = x+col;
+                            yDesired = y+row;
+                            if (xDesired_prev == 0) {
+                                xDesired_prev = xDesired;
+                                yDesired_prev = yDesired;
+                            }
+                            // break the both for loops once the track is found
+                            break outerLoop;
+                        }
+                    }
+                }
+            }
+            // calculate position error
+            posError = (float) Math.sqrt(Math.pow(xDesired - x,2) + Math.pow(yDesired - y,2));
 
-        // add if (go == 2) {} statement for once the first lap is complete, then use the racing line for feedback control
+            // determine whether track is to the left or right (may need to assume clockwise or counterclockwise...)
 
+
+            if (posError != 0 && xDesired - xDesired_prev != 0) {
+                // calculate desired angle based on current vs previous track points
+                thetaDesired = (float) Math.atan2(yDesired - yDesired_prev, xDesired - xDesired_prev);
+                // calculate angular error
+                angError = thetaDesired - theta;
+            } else {
+                if (thetaDesired_prev == 0){
+                    thetaDesired = theta;
+                    angError = 0;
+                }
+                else {
+                    thetaDesired = thetaDesired_prev;
+                    angError = thetaDesired - theta;
+                }
+            }
+            xDesired_prev = xDesired;
+            yDesired_prev = yDesired;
+            thetaDesired_prev = thetaDesired;
+
+            // use proportional control to calculate a steering angle value between 0 and 640 based on angError (rad) and posError (cm)
+            // using the Stanley method: https://www.ri.cmu.edu/pub_files/2009/2/Automatic_Steering_Methods_for_Autonomous_Automobile_Path_Tracking.pdf (pg 14)
+            float cmdRad = (float) Math.atan(thresh2*posError/800); // + angError; // assuming constant velocity, thresh2 is the proportional gain
+            float cmdDeg = cmdRad*180/((float) Math.PI);
+            int cmd;
+            if (cmdDeg <= -30) {
+                cmd = 640;
+            } else if (cmdDeg >= 30) {
+                cmd = 1;
+            } else {
+                cmd = (int) (-320*cmdDeg/30 + 320.5);
+            }
+            // send steering command to PIC
+            String sendString = String.valueOf(cmd) + '\n';
+            try {
+                sPort.write(sendString.getBytes(), 1); // 1 is the timeout
+            } catch (IOException e) {}
+
+            // save position and angular error to a csv for later plotting and analysis...???
+            myTextView2.setText(String.format("posError= %f angError= %f cmdDeg= %f", posError, angError, cmdDeg));
+        }
     }
 }
