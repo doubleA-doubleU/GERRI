@@ -13,7 +13,8 @@
 This project allows an off-the-shelf radio controlled car to be converted
 into an autonomous vehicle. This is accomplished by replacing the car's 
 control system with an Android phone and a PIC32 microcontroller. External
-localization is done through HTC vive position sensors.
+localization is done through HTC vive position sensors. Check out this 
+[video][youtube] for a demonstration.
 
 
 ## Required Components 
@@ -22,11 +23,10 @@ localization is done through HTC vive position sensors.
 3. USB OTG cable - micro to mini
 4. 3D printed [phone and PCB mounts][parts]
 5. Microchip [PIC32MX250F128B][pic] microcontroller in 28-pin SPDIP package
-6. LSM6DS33 [Accelerometer][accel] 
-7. VNH5019 [Motor Driver Carrier][hbridge]
-8. HTC Vive [Base Station][base]
-9. 2x HTC Vive Position Sensor, [TS3633-CM1][vive]
-10. Custom [PCB][pcb] with mounting holes for:
+6. VNH5019 [Motor Driver Carrier][hbridge]
+7. HTC Vive [Base Station][base]
+8. 2x HTC Vive Position Sensor, [TS3633-CM1][vive]
+9. Custom [PCB][pcb] with mounting holes for:
 	* 28 Pin DIP socket
 	* Mini USB connector
 	* Slideswitch
@@ -138,7 +138,7 @@ try {
 } catch (IOException e) {}
 ```
 This process continues until GERRI has completed its first lap and generated
-a map of the entire track, it switches modes from simple line-following 
+a map of the entire track. It then switches modes from simple line-following 
 to a proportional feedback controller that uses the track bitmap as the desired
 path. The first step in this phase is to find the nearest point on the track
 from the car's current position:
@@ -248,14 +248,148 @@ angles between positive and negative 30 degrees that is sent to the PIC.
 
 
 #### The PIC32 firmware:
-... app.c
-... system_interrupt.c
+The PIC32 communicates with the Android app via USB. It takes the integer value
+provided by the app and controlls the motor speed/direction and the servo steering 
+angle as shown below (from `app.c`):
+```c
+if (gotRx) { // rxVal should be an int between 0 and 640 (setting motor speed and steering angle from Center of Mass)
+    if (rxVal > 640) {          // stop button pressed, no movement, center the steering, reset lap time
+        duty = 0;
+        LATAbits.LATA1 = 0;
+        LATBbits.LATB2 = 1;
+        OC3RS = 1000;
+        go = 0;
+        lapTime = 0.0;
+    } else if (rxVal <= 0) {    // reverse direction and previous steering command to find the line again
+        duty = 20;
+        LATAbits.LATA1 = 1;     // reverse drive motion
+        LATBbits.LATB2 = 0;     // reverse drive motion
+        rxVal = rxValPrev;
+        OC3RS = 680 + rxValPrev;
+        go = 1;
+    } else {                    // steer towards the COM
+        duty = 20;
+        LATAbits.LATA1 = 0;     // forward drive motion
+        LATBbits.LATB2 = 1;     // forward drive motion
+        OC3RS = 1320 - rxVal;   // ranges from 680 to 1320
+        go = 1;
+    }
+	OC1RS = duty*40;            // convert duty cycle based on period register
+
+    rxPos = 0;
+    gotRx = 0; // clear the flag
+    rxValPrev = rxVal;
+    for (j = 0; j < 64; j++) {
+        rx[j] = 0; // clear the array
+    }
+}
+```
+The PIC32 also provides the position (x,y,theta) as well as the current lap time to the
+Android app via USB (also from `app.c`):
+```c
+// calculate position
+x_pos[0] = (LIGHTHOUSEHEIGHT*sin((x_ang[0])*DEG_TO_RAD))/(sin((60+LIGHTHOUSEANGLE-x_ang[0])*DEG_TO_RAD)*sin((120-LIGHTHOUSEANGLE)*DEG_TO_RAD));
+y_pos[0] = (2*LIGHTHOUSEHEIGHT*sin(y_ang[0]*DEG_TO_RAD))/sin((150-y_ang[0])*DEG_TO_RAD);
+x_pos[1] = (LIGHTHOUSEHEIGHT*sin((x_ang[1])*DEG_TO_RAD))/(sin((60+LIGHTHOUSEANGLE-x_ang[1])*DEG_TO_RAD)*sin((120-LIGHTHOUSEANGLE)*DEG_TO_RAD));
+y_pos[1] = (2*LIGHTHOUSEHEIGHT*sin(y_ang[1]*DEG_TO_RAD))/sin((150-y_ang[1])*DEG_TO_RAD);
+x = (x_pos[0] + x_pos[1])/2.0;
+y = (y_pos[0] + y_pos[1])/2.0;
+        
+// calculate angle 
+if (x_pos[0] == x_pos[1] && y_pos[0] != y_pos[1]) {
+	if (y_pos[0] > y_pos[1]) {
+        theta = PHI;
+    } else {
+        theta = PHI + M_PI;
+    }
+} else if (y_pos[0] == y_pos[1] && x_pos[0] != x_pos[1]) {
+    if (x_pos[1] > x_pos[0]){
+        theta = PHI + M_PI_2;
+    } else {
+        theta = PHI + M_PI_2 + M_PI;
+    }
+} else if (x_pos[0] == x_pos[1] && y_pos[0] == y_pos[1]) {
+    theta = 0.0; // should not happen, as sensors are in two different locations, unless sensors are not receiving data
+} else {
+    theta = atan2(y_pos[1]-y_pos[0],x_pos[1]-x_pos[0]) + PHI + M_PI_2; // always treating left sensor as origin for angle calc
+}
+            
+// calculate lap time
+lapTime = lapTime + ((float) (_CP0_GET_COUNT() - startTime)) / 24000000.0;
+               
+// send data to phone
+len = sprintf(dataOut, "%.3f %.3f %.3f %.3f\r\n", x, y, theta, lapTime);
+USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+    &appData.writeTransferHandle, dataOut, len,
+    USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE); 
+```
+The determination of position is done by `system_interrupt.c` through two ISRs,
+one for each of the vive sensors. One of the ISRs is below (and the other is very
+similar):
+```c
+void __ISR(_INPUT_CAPTURE_1_VECTOR, IPL5SOFT) IC1ISR(void) {
+    static unsigned int ptsL=0;     // previous time stamp for left sensor
+    static int stateL = -1;         // state of left sensor
+    unsigned int tsL;               // time stamp for left sensor
+    int unusedL = IC1BUF;           // the value of timer2 right now, doesn't matter
+    unusedL = IC1BUF;               // read multiple times to ensure the buffer is cleared
+    unusedL = IC1BUF;               // ...
+    unusedL = IC1BUF;               // ...
+    LATBbits.LATB13=PORTAbits.RA4;   // match the sensor signal on a debugging pin
+    if (PORTAbits.RA4) {            // ignore rising edges
+        IFS0bits.IC1IF = 0;         // clear interrupt flag
+        return;                     // exit the ISR
+    }    
+    tsL = _CP0_GET_COUNT();         // get the current time
+    if (ptsL > 0) {                 // won't calculate anything the first time through
+        unsigned int l = tsL - ptsL;// calculate elapsed time
+        if  (l > CYCLE) {           // indicates a synchronization cycle
+            stateL = 0;             // prepare to read y angle (from right to left)
+        } else {
+            if (stateL >= 0) {
+                switch (stateL) {   
+                    case 0: {
+                        y_ang[0]=l*0.0006;  // read y angle in degrees (0 to 120)
+                        break;
+                    }
+                    case 2: {
+                        x_ang[0]=l*0.0006;  // read x angle in degrees (0 to 120)
+                        break;
+                    }
+                }
+                stateL++;                       // cycle through states
+                if (stateL >=4 ) stateL = -1;   // reset state
+            }
+        }
+    }
+    ptsL=tsL;           // set the previous time stamp for the next time through
+    IFS0bits.IC1IF = 0; // clear the interrupt flag
+}
+```
+This works because the base station conducts two infrared sweeps, one horizontal and one
+vertical. By timing the pulses seen by the sensors, we can determine the angle at which the
+base station "sees" the sensor in both directions. With some basic trigonometry, this can
+be converted into meters. By doing this with two sensors, the car's heading can also be
+determined, as seen above. 
 
 
-	
+## Future Work
+Although this method allows for some autonomous features, it would be ideal to utilize the
+track map that is generated to do some more detailed path planning. This could allow for 
+the calculation of a racing line that is optimized to decrease the radius of curvature of 
+the path and hence the required steering effort of the car.
+
+I also considered including an accelerometer in order to detect loss of traction and 
+adjust motor speed accordingly. Due to the limitations on track size based on my workspace,
+I decided to use a fixed (and relatively slow) velocity. If the track size were larger,
+it would be possible to modulate velocity based on the current error and speed up or slow
+down based on the curvature of the track. In that scenario, an accelerometer would be quite 
+useful.
+
+
+[youtube]: https://www.youtube.com/user/MdoubleAdoubleU
 [parts]: https://github.com/weatherman03/GERRI/tree/master/Parts
 [pic]: http://www.microchipdirect.com/product/PIC32MX250F128B
-[accel]: https://www.pololu.com/product/2736
 [hbridge]: https://www.pololu.com/product/1451
 [base]: https://www.vive.com/us/accessory/base-station/
 [vive]: https://www.triadsemi.com/product/ts3633-cm1/
