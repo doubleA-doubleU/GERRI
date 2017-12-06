@@ -10,9 +10,10 @@
 </p>
 
 ## Overview
-This project allows an off-the-shelf radio controlled car to be converted into an autonomous
-vehicle. This is accomplished by replacing the car's control system with an Android phone and 
-a PIC32 microcontroller. 
+This project allows an off-the-shelf radio controlled car to be converted
+into an autonomous vehicle. This is accomplished by replacing the car's 
+control system with an Android phone and a PIC32 microcontroller. External
+localization is done through HTC vive position sensors.
 
 
 ## Required Components 
@@ -42,26 +43,28 @@ a PIC32 microcontroller.
 
 	
 ## Software
-In MPLAB X IDE:
-	* Create new 32-bit MPLAB Harmony project, named GERRI, for the PIC32MX250F128B
-	* Generate code
-	* Copy all code from the provided [app.c][appc], [app.h][apph], [main.c][main], 
-	[default.mhc][default], [system_config.h][config], and [system_interrupt.c][interrupt]
-	into the auto-generated Harmony files of same names
-	* Install the project onto the PIC
+#### In MPLAB X IDE:
+1. Create new 32-bit MPLAB Harmony project, named GERRI, for the PIC32MX250F128B
+2. Generate code
+3. Copy all code from the provided [app.c][appc], [app.h][apph], 
+[main.c][main], [default.mhc][default], [system_config.h][config], 
+and [system_interrupt.c][interrupt]	into the auto-generated Harmony 
+files of same names
+4. Install the project onto the PIC
 	
-In Android Studio:
-	* Create new project with an Empty Activity, named GERRI
-	* Copy the provided [classes.jar][classes] to <your_local_project_path>/GERRI/app/libs/
-	* In the IDE, navigate the left panel to Project/GERRI/app/libs/
-	* Right click classes.jar, Add as Library, Add to Module: app
-	* In the IDE, navigate the left panel to Android/app/res/
-	* Right click res, add driectory, name it "xml"
-	* Right click xml, add new XML Resource file, name it "device_filter.xml"
-	* Open this new xml file and replace the contents with the code from the provided 
-	[device_filter.xml][filter] file
-	* Copy all code from the provided [activity_main.xml][layout], [AndroidManifest.xml][manifest], 
-	and [MainActivity.java][java] into auto-generated Android Studio files of same name.
+#### In Android Studio:
+1. Create new project with an Empty Activity, named GERRI
+2. Copy the provided [classes.jar][classes] to <your_local_project_path>/GERRI/app/libs/
+3. In the IDE, navigate the left panel to Project/GERRI/app/libs/
+4. Right click classes.jar, Add as Library, Add to Module: app
+5. In the IDE, navigate the left panel to Android/app/res/
+6. Right click res, add driectory, name it "xml"
+7. Right click xml, add new XML Resource file, name it "device_filter.xml"
+8. Open this new xml file and replace the contents with the code from 
+the provided [device_filter.xml][filter] file
+9. Copy all code from the provided [activity_main.xml][layout], 
+[AndroidManifest.xml][manifest], and [MainActivity.java][java] into 
+the auto-generated Android Studio files of same name.
 
 	
 ## Under the Hood
