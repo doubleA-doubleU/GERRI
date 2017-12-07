@@ -387,7 +387,7 @@ down based on the curvature of the track. In that scenario, an accelerometer wou
 useful.
 
 
-[youtube]: https://www.youtube.com/user/MdoubleAdoubleU
+[youtube]: https://youtu.be/dq8rHDOIuIY
 [parts]: https://github.com/weatherman03/GERRI/tree/master/Parts
 [pic]: http://www.microchipdirect.com/product/PIC32MX250F128B
 [hbridge]: https://www.pololu.com/product/1451
